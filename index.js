@@ -1,14 +1,77 @@
-{
-  "message": "    at TracingChannel.traceSync (node:diagnostics_channel:328:14)",
-  "attributes": {
-    "level": "error"
-  },
-  "tags": {
-    "project": "7d4b8fad-6cf4-4a0f-8cc9-cd796acadd4d",
-    "environment": "e0cca196-8824-4889-b662-dedb5bf0f6f3",
-    "service": "c2e0cc33-b0b4-4d6b-ae65-32abdfa4396b",
-    "deployment": "f9cccad0-e5f9-46ac-80e2-005ad0e77177",
-    "replica": "baeaa32d-033b-4f2d-b00e-de909055867e"
-  },
-  "timestamp": "2025-12-29T16:00:19.708265218Z"
-}
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const mysql = require("mysql2");
+require("dotenv").config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(bodyParser.json());
+
+const db = mysql.createConnection({
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQL_ROOT_PASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT || 3306,
+});
+
+db.connect((err) => {
+  if (err) {
+    console.error("MySQL error:", err);
+    process.exit(1);
+  }
+  console.log("Connected to MySQL");
+});
+
+app.get("/", (req, res) => {
+  res.json({ status: "API OK" });
+});
+
+app.get("/books", (req, res) => {
+  db.query("SELECT * FROM books", (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+app.post("/books", (req, res) => {
+  const { name, price } = req.body;
+  db.query(
+    "INSERT INTO books (name, price) VALUES (?, ?)",
+    [name, price],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ id: result.insertId, name, price });
+    }
+  );
+});
+
+app.put("/books/:id", (req, res) => {
+  const { name, price } = req.body;
+  const { id } = req.params;
+
+  db.query(
+    "UPDATE books SET name=?, price=? WHERE id=?",
+    [name, price, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id, name, price });
+    }
+  );
+});
+
+app.delete("/books/:id", (req, res) => {
+  const { id } = req.params;
+
+  db.query("DELETE FROM books WHERE id=?", [id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Deleted" });
+  });
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
