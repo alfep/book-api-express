@@ -12,15 +12,14 @@ app.use(cors());
 app.use(express.json());
 
 // ===== MySQL Railway Connection =====
-const db = mysql.createPool({
+const db = mysql.createConnection({
   host: process.env.MYSQLHOST,
   port: process.env.MYSQLPORT,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
-  waitForConnections: true,
-  connectionLimit: 10,
 });
+
 
 // Test DB connection
 db.getConnection((err, conn) => {
