@@ -20,6 +20,15 @@ const db = mysql.createConnection({
   database: process.env.MYSQLDATABASE,
 });
 
+db.connect((err) => {
+  if (err) {
+    console.error("❌ MySQL connection failed:", err);
+    return;
+  }
+  console.log("✅ Connected to MySQL Railway");
+});
+
+
 
 // Test DB connection
 db.getConnection((err, conn) => {
