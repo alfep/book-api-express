@@ -1,85 +1,118 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 const mysql = require("mysql2");
-require("dotenv").config(); // <-- ini penting
 
 const app = express();
 
-// PORT dari env, default 3000
+// Railway auto inject PORT
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-// Koneksi MySQL pakai env
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+// ===== MySQL Railway Connection =====
+const db = mysql.createPool({
+  host: process.env.MYSQLHOST,
+  port: process.env.MYSQLPORT,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  waitForConnections: true,
+  connectionLimit: 10,
 });
 
-db.connect((err) => {
-  if (err) throw err;
-  console.log("Connected to MySQL");
+// Test DB connection
+db.getConnection((err, conn) => {
+  if (err) {
+    console.error("❌ MySQL connection failed:", err.message);
+  } else {
+    console.log("✅ Connected to MySQL Railway");
+    conn.release();
+  }
 });
 
-// === ROUTES ===
+// ===== ROUTES =====
+
 // GET all books
 app.get("/books", (req, res) => {
   db.query("SELECT * FROM books", (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
     res.json(results);
   });
 });
 
-// POST add new book
+// POST new book
 app.post("/books", (req, res) => {
   const { name, price } = req.body;
+
+  if (!name || !price) {
+    return res.status(400).json({ message: "Name & price required" });
+  }
+
   db.query(
     "INSERT INTO books (name, price) VALUES (?, ?)",
-    [name, parseFloat(price)],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res
-        .status(201)
-        .json({ id: results.insertId, name, price: parseFloat(price) });
+    [name, price],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Insert failed" });
+      }
+
+      res.status(201).json({
+        id: result.insertId,
+        name,
+        price,
+      });
     }
   );
 });
 
 // PUT update book
 app.put("/books/:id", (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
   const { name, price } = req.body;
 
   db.query(
     "UPDATE books SET name=?, price=? WHERE id=?",
-    [name, parseFloat(price), id],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.affectedRows === 0)
+    [name, price, id],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Update failed" });
+      }
+
+      if (result.affectedRows === 0) {
         return res.status(404).json({ message: "Book not found" });
-      res.json({ id: parseInt(id), name, price: parseFloat(price) });
+      }
+
+      res.json({ id: Number(id), name, price });
     }
   );
 });
 
 // DELETE book
 app.delete("/books/:id", (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  db.query("DELETE FROM books WHERE id=?", [id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (results.affectedRows === 0)
+  db.query("DELETE FROM books WHERE id=?", [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Delete failed" });
+    }
+
+    if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Book not found" });
-    res.json({ message: "Deleted successfully" });
+    }
+
+    res.json({ message: "Deleted" });
   });
 });
 
-app.listen(PORT, "0.0.0.0", () =>
-  console.log(`Server running on http://localhost:${PORT}`)
-);
+// ===== START SERVER =====
+app.listen(PORT, () => {
+  console.log(`🚀 API running on port ${PORT}`);
+});
