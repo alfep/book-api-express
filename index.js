@@ -1,126 +1,14 @@
-const express = require("express");
-const cors = require("cors");
-const mysql = require("mysql2");
-
-const app = express();
-
-// Railway auto inject PORT
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// ===== MySQL Railway Connection =====
-const db = mysql.createConnection({
-  host: process.env.MYSQLHOST,
-  port: process.env.MYSQLPORT,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
-});
-
-db.connect((err) => {
-  if (err) {
-    console.error("❌ MySQL connection failed:", err);
-    return;
-  }
-  console.log("✅ Connected to MySQL Railway");
-});
-
-
-
-// Test DB connection
-db.getConnection((err, conn) => {
-  if (err) {
-    console.error("❌ MySQL connection failed:", err.message);
-  } else {
-    console.log("✅ Connected to MySQL Railway");
-    conn.release();
-  }
-});
-
-// ===== ROUTES =====
-
-// GET all books
-app.get("/books", (req, res) => {
-  db.query("SELECT * FROM books", (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Database error" });
-    }
-    res.json(results);
-  });
-});
-
-// POST new book
-app.post("/books", (req, res) => {
-  const { name, price } = req.body;
-
-  if (!name || !price) {
-    return res.status(400).json({ message: "Name & price required" });
-  }
-
-  db.query(
-    "INSERT INTO books (name, price) VALUES (?, ?)",
-    [name, price],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Insert failed" });
-      }
-
-      res.status(201).json({
-        id: result.insertId,
-        name,
-        price,
-      });
-    }
-  );
-});
-
-// PUT update book
-app.put("/books/:id", (req, res) => {
-  const { id } = req.params;
-  const { name, price } = req.body;
-
-  db.query(
-    "UPDATE books SET name=?, price=? WHERE id=?",
-    [name, price, id],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Update failed" });
-      }
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Book not found" });
-      }
-
-      res.json({ id: Number(id), name, price });
-    }
-  );
-});
-
-// DELETE book
-app.delete("/books/:id", (req, res) => {
-  const { id } = req.params;
-
-  db.query("DELETE FROM books WHERE id=?", [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Delete failed" });
-    }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Book not found" });
-    }
-
-    res.json({ message: "Deleted" });
-  });
-});
-
-// ===== START SERVER =====
-app.listen(PORT, () => {
-  console.log(`🚀 API running on port ${PORT}`);
-});
+{
+  "message": "    at TracingChannel.traceSync (node:diagnostics_channel:328:14)",
+  "attributes": {
+    "level": "error"
+  },
+  "tags": {
+    "project": "7d4b8fad-6cf4-4a0f-8cc9-cd796acadd4d",
+    "environment": "e0cca196-8824-4889-b662-dedb5bf0f6f3",
+    "service": "c2e0cc33-b0b4-4d6b-ae65-32abdfa4396b",
+    "deployment": "f9cccad0-e5f9-46ac-80e2-005ad0e77177",
+    "replica": "baeaa32d-033b-4f2d-b00e-de909055867e"
+  },
+  "timestamp": "2025-12-29T16:00:19.708265218Z"
+}
